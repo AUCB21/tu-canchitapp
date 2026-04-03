@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import { ClienteAutocomplete } from '@/components/clientes/ClienteAutocomplete'
 import { createReserva } from '@/lib/actions/reservas'
 import type { Cliente } from '@/lib/actions/clientes'
@@ -17,6 +18,15 @@ interface BookingFormProps {
   onSuccess?: () => void
 }
 
+/** Add `minutes` to a "HH:mm" string, clamped at "24:00" */
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number)
+  const total = h * 60 + m + minutes
+  const newH = Math.min(Math.floor(total / 60), 24)
+  const newM = newH === 24 ? 0 : total % 60
+  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`
+}
+
 export function BookingForm({
   canchas,
   defaultCanchaId,
@@ -29,10 +39,7 @@ export function BookingForm({
   const [canchaId, setCanchaId] = useState<number>(defaultCanchaId ?? canchas[0]?.id ?? 0)
   const [date, setDate] = useState(defaultDate)
   const [horaInicio, setHoraInicio] = useState(defaultHora ?? '20:00')
-  const [horaFin, setHoraFin] = useState(() => {
-    const h = parseInt(defaultHora ?? '20')
-    return `${String(Math.min(h + 1, 24)).padStart(2, '0')}:00`
-  })
+  const [horaFin, setHoraFin] = useState(() => addMinutes(defaultHora ?? '20:00', 60))
   const [precio, setPrecio] = useState('')
   const [notas, setNotas] = useState('')
   const [error, setError] = useState('')
@@ -43,7 +50,7 @@ export function BookingForm({
     setCanchaId(defaultCanchaId ?? canchas[0]?.id ?? 0)
     setDate(defaultDate)
     setHoraInicio(defaultHora ?? '20:00')
-    setHoraFin(`${String(Math.min(parseInt(defaultHora ?? '20') + 1, 24)).padStart(2, '0')}:00`)
+    setHoraFin(addMinutes(defaultHora ?? '20:00', 60))
     setPrecio('')
     setNotas('')
     setError('')
@@ -52,6 +59,12 @@ export function BookingForm({
   function handleClose() {
     setOpen(false)
     resetForm()
+  }
+
+  function handleInicioChange(value: string) {
+    setHoraInicio(value)
+    // Auto-adjust fin to maintain the same duration (default 1h)
+    setHoraFin(addMinutes(value, 60))
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -79,10 +92,12 @@ export function BookingForm({
       })
 
       if (!result.ok) {
+        toast.error(`Conflicto: ${result.error}`)
         setError(result.error)
         return
       }
 
+      toast.success('Reserva creada')
       handleClose()
       onSuccess?.()
     })
@@ -156,7 +171,7 @@ export function BookingForm({
                     type="time"
                     id="booking-inicio"
                     value={horaInicio}
-                    onChange={(e) => setHoraInicio(e.target.value)}
+                    onChange={(e) => handleInicioChange(e.target.value)}
                     min="08:00"
                     max="23:30"
                     className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -174,6 +189,26 @@ export function BookingForm({
                     className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
+              </div>
+
+              {/* Duration shortcuts */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Duración:</span>
+                {[60, 90, 120].map((mins) => (
+                  <button
+                    key={mins}
+                    type="button"
+                    onClick={() => setHoraFin(addMinutes(horaInicio, mins))}
+                    className={cn(
+                      'rounded px-2 py-0.5 text-xs border transition-colors',
+                      horaFin === addMinutes(horaInicio, mins)
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'hover:bg-accent border-border'
+                    )}
+                  >
+                    {mins === 60 ? '1h' : mins === 90 ? '1h 30m' : '2h'}
+                  </button>
+                ))}
               </div>
 
               {/* Precio */}

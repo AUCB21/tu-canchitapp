@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import { logPago } from '@/lib/actions/pagos'
 import { cn } from '@/lib/utils'
 import { BanknoteIcon, SmartphoneIcon, XIcon } from 'lucide-react'
@@ -38,6 +39,7 @@ export function PaymentForm({ reservaId, precioTotal, onSuccess, trigger }: Paym
     setError('')
     startTransition(async () => {
       await logPago({ reservaId, monto: amount, metodo, notas: notas || undefined })
+      toast.success('Pago registrado')
       handleClose()
       onSuccess?.()
     })

@@ -1,12 +1,24 @@
 import { db } from '@/db'
-import { pagos, reservas } from '@/db/schema'
-import { and, gte, lt, sql, ne } from 'drizzle-orm'
+import { pagos, reservas, clientes, canchas } from '@/db/schema'
+import { and, gte, lt, sql, ne, eq } from 'drizzle-orm'
+import type { InferSelectModel } from 'drizzle-orm'
 
 export interface ResumenDiario {
   total: number
   efectivo: number
   transferencia: number
   reservas: number
+}
+
+export interface ReservaDiaria {
+  id: number
+  clienteNombre: string
+  canchaNombre: string
+  inicio: Date
+  fin: Date
+  precio: string
+  estado: string
+  totalPagado: number
 }
 
 /**
@@ -53,3 +65,42 @@ export async function getResumenDiario(date: Date): Promise<ResumenDiario> {
     reservas: count,
   }
 }
+
+/**
+ * Non-cancelled bookings for a given day with total paid amounts.
+ */
+export async function getReservasDelDia(date: Date): Promise<ReservaDiaria[]> {
+  const startOfDay = new Date(`${date.toISOString().slice(0, 10)}T00:00:00-03:00`)
+  const endOfDay = new Date(`${date.toISOString().slice(0, 10)}T23:59:59-03:00`)
+
+  const rows = await db
+    .select({
+      id: reservas.id,
+      clienteNombre: clientes.nombre,
+      canchaNombre: canchas.nombre,
+      inicio: reservas.inicio,
+      fin: reservas.fin,
+      precio: reservas.precio,
+      estado: reservas.estado,
+      totalPagado: sql<string>`COALESCE((
+        SELECT SUM(p.monto) FROM pagos p WHERE p.reserva_id = ${reservas.id}
+      ), 0)`,
+    })
+    .from(reservas)
+    .innerJoin(clientes, eq(reservas.clienteId, clientes.id))
+    .innerJoin(canchas, eq(reservas.canchaId, canchas.id))
+    .where(
+      and(
+        gte(reservas.inicio, startOfDay),
+        lt(reservas.inicio, endOfDay),
+        ne(reservas.estado, 'cancelada')
+      )
+    )
+    .orderBy(reservas.inicio)
+
+  return rows.map((r) => ({
+    ...r,
+    totalPagado: parseFloat(r.totalPagado),
+  }))
+}
+

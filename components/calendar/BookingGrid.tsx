@@ -3,8 +3,10 @@
 import { TimeAxis } from './TimeAxis'
 import { CourtHeader } from './CourtHeader'
 import { BookingBlock } from './BookingBlock'
+import { CurrentTimeIndicator } from './CurrentTimeIndicator'
 import type { Reserva } from '@/lib/queries/reservas'
 import type { Cancha } from '@/lib/queries/canchas'
+import { CalendarIcon } from 'lucide-react'
 
 // Operating range: 08:00-24:00 = 16 hours, 30-min slots = 32 slot rows
 const DAY_START_HOUR = 8
@@ -15,15 +17,17 @@ const TOTAL_SLOTS = ((DAY_END_HOUR - DAY_START_HOUR) * 60) / SLOT_MINUTES // 32
 interface BookingGridProps {
   canchas: Pick<Cancha, 'id' | 'nombre' | 'tipo'>[]
   reservas: Reserva[]
+  selectedDate: string  // "YYYY-MM-DD" — used for today indicator
 }
 
-export function BookingGrid({ canchas, reservas }: BookingGridProps) {
+export function BookingGrid({ canchas, reservas, selectedDate }: BookingGridProps) {
   const numCourts = canchas.length
 
   if (numCourts === 0) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-lg border border-dashed">
-        <p className="text-sm text-muted-foreground">Sin canchas activas</p>
+      <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-muted-foreground">
+        <CalendarIcon className="h-8 w-8 opacity-30" />
+        <p className="text-sm">Sin canchas activas</p>
       </div>
     )
   }
@@ -66,6 +70,9 @@ export function BookingGrid({ canchas, reservas }: BookingGridProps) {
             />
           ))
         )}
+
+        {/* Current time indicator */}
+        <CurrentTimeIndicator numCourts={numCourts} selectedDate={selectedDate} />
 
         {/* Booking blocks */}
         {canchas.map((cancha, courtIndex) => {

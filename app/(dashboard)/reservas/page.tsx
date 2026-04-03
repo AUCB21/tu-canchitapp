@@ -48,7 +48,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
         </div>
       </div>
 
-      <BookingGrid canchas={canchas} reservas={reservas} />
+      <BookingGrid canchas={canchas} reservas={reservas} selectedDate={selectedDate} />
     </div>
   )
 }

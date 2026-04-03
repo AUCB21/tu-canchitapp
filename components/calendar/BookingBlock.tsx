@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { toArgTime, formatARS } from '@/lib/utils'
 import type { Reserva } from '@/lib/queries/reservas'
 import { StarIcon, XIcon } from 'lucide-react'
@@ -34,6 +35,9 @@ export function BookingBlock({ reserva, courtIndex }: BookingBlockProps) {
     setCancelling(true)
     try {
       await cancelReserva(reserva.id)
+      toast.success('Reserva cancelada')
+    } catch {
+      toast.error('No se pudo cancelar la reserva')
     } finally {
       setCancelling(false)
       setDetail(false)

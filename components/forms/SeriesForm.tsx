@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import { ClienteAutocomplete } from '@/components/clientes/ClienteAutocomplete'
 import { createSerie } from '@/lib/actions/series'
 import type { Cliente } from '@/lib/actions/clientes'
@@ -36,7 +37,6 @@ export function SeriesForm({ canchas }: SeriesFormProps) {
   )
   const [fechaFin, setFechaFin] = useState('')
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [isPending, startTransition] = useTransition()
 
   function handleClose() {
@@ -49,7 +49,6 @@ export function SeriesForm({ canchas }: SeriesFormProps) {
     setPrecio('')
     setFechaFin('')
     setError('')
-    setSuccess('')
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -74,8 +73,8 @@ export function SeriesForm({ canchas }: SeriesFormProps) {
         fechaFin: fechaFin ? new Date(fechaFin + 'T23:59:59-03:00') : undefined,
       })
 
-      setSuccess(`Turno fijo creado — ${result.reservasCreadas} reservas generadas`)
-      setTimeout(handleClose, 1500)
+      toast.success(`Turno fijo creado — ${result.reservasCreadas} reservas generadas`)
+      setTimeout(handleClose, 300)
     })
   }
 
@@ -210,9 +209,6 @@ export function SeriesForm({ canchas }: SeriesFormProps) {
 
               {error && (
                 <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
-              )}
-              {success && (
-                <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</p>
               )}
 
               <div className="flex gap-2 pt-1">
