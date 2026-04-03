@@ -638,10 +638,62 @@ DATABASE_URL="..." npx drizzle-kit migrate
 - [ ] Verify: log 2 partial payments → estado becomes 'pendiente_pago'; log final → 'pagada'
 - [ ] Verify: daily summary shows correct ARS totals by method
 
-### Phase 8: Polish & Deployment
-- [ ] Add loading skeletons (`Skeleton` from shadcn/ui) to `CourtGrid` and `BookingGrid`
+### Phase 8: Performance — Memoization & SSR Optimization
+
+Performance work is scoped to the inflection points identified by static audit. Only apply memoization where there is a measurable or structural reason; do not memoize leaf components or trivial computations.
+
+**Identified inflection points**
+
+| Location | Severity | Issue |
+|----------|----------|-------|
+| `CourtList.tsx:90-95` | HIGH | `useSensors()` config object recreated on every render, passed to `DndContext` |
+| `CourtList.tsx:116` | HIGH | `items.map((c) => c.id)` creates new array on every render for `SortableContext` |
+| `CourtList.tsx:86-88` | MEDIUM | `useEffect` syncs `initialCanchas` prop; fires whenever parent passes a new array identity |
+| `CourtForm.tsx:66-68` | MEDIUM | `boundAction` closure recreated every render |
+| `configuracion/canchas/page.tsx:22-26` | MEDIUM | Inline `<Button>` JSX passed as `trigger` prop — new reference per render |
+| `lib/queries/canchas.ts:25` | MEDIUM | `getCanchasConDisponibilidad` calls `getCanchas()` as a sub-call; two separate DB round-trips per page load |
+| `lib/actions/canchas.ts:17-18` | LOW | `createCancha` fetches all rows just to compute `MAX(orden)` |
+
+**Rules to apply**
+- `useMemo` for derived arrays/objects that are dependencies of context providers or effects (`SortableContext items`, `DndContext sensors`)
+- `useMemo` for bound closures that are recreated per render in Client Components (`boundAction`)
+- Extract inline JSX props to `const` before JSX return in Server Components — reference is stable within a single render and avoids unnecessary prop churn downstream
+- Merge `getCanchas()` sub-call into `getCanchasConDisponibilidad()` as a single SQL query with a LEFT JOIN instead of two round-trips
+- Replace `MAX(orden)` scan in `createCancha` with `sql\`SELECT COALESCE(MAX(orden), -1) FROM canchas WHERE activa = true\``
+- Use Next.js `cache()` wrapper from `'react'` on `getCanchas()` and `getCanchasConDisponibilidad()` so parallel calls within the same request are deduplicated at the React level (replaces the implicit fetch deduplication that only applies to `fetch()`, not Drizzle)
+
+**Tasks**
+- [ ] In `CourtList.tsx`: wrap `useSensors(...)` call result in `useMemo` with empty deps `[]`
+- [ ] In `CourtList.tsx`: memoize `items.map((c) => c.id)` as `const sortableIds = useMemo(() => items.map((c) => c.id), [items])`; pass `sortableIds` to `SortableContext`
+- [ ] In `CourtForm.tsx`: wrap `boundAction` computation in `useMemo(() => cancha ? editAction.bind(null, cancha.id) : createAction, [cancha])`
+- [ ] In `configuracion/canchas/page.tsx`: extract `trigger` to a `const triggerButton = <Button>...</Button>` above the JSX return
+- [ ] In `lib/queries/canchas.ts`: refactor `getCanchasConDisponibilidad` to use a single query with LEFT JOIN + GROUP BY instead of calling `getCanchas()` then a second query; eliminates one DB round-trip per home page load
+- [ ] In `lib/queries/canchas.ts`: wrap both `getCanchas()` and `getCanchasConDisponibilidad()` with `import { cache } from 'react'` so repeated calls in the same RSC render tree share the result
+- [ ] In `lib/actions/canchas.ts` (`createCancha`): replace the `db.select({ orden }).from(canchas)` + JS `Math.max()` with a single `db.select({ max: sql<number>\`COALESCE(MAX(${canchas.orden}), -1)\` }).from(canchas).where(eq(canchas.activa, true))`
+- [ ] Verify: after CourtList memoization, dnd-kit drag does not cause SortableContext to re-mount mid-drag
+- [ ] Verify: home page shows single DB query for availability in network/server logs (no duplicate `getCanchas` call)
+- [ ] Verify: `tsc --noEmit` still passes after all changes
+
+### Phase 9: Polish & Deployment
+
+**UI Improvements (high impact)**
+- [ ] Mobile hamburger nav — slide-out drawer on `<768px`; current nav wraps/breaks at small widths
+- [ ] Active nav link — use `usePathname()` to add `font-semibold text-foreground` class on the current route
+- [ ] `sonner` toast notifications — success/conflict feedback for: booking create, booking cancel, serie create, pago log
+- [ ] Current-time indicator — red horizontal line at current hour inside `BookingGrid`, only when viewing today
+- [ ] `CourtCard` → calendar navigation — clicking a court card on the home screen navigates to `/reservas?date=X&cancha=Y`
+
+**UI Improvements (medium impact)**
+- [ ] `BookingForm` duration shortcuts — after setting start time, show quick buttons: +1h, +1.5h, +2h to auto-fill end time
+- [ ] `PagosPage` booking list — below the stat cards, show today's reservations as a table with estado badge + inline "Registrar pago" button
+- [ ] `SeriesList` next occurrence — compute and display "próximo: Lun 07/04" for each active series
+
+**UI Improvements (polish)**
+- [ ] Empty state illustrations — replace plain text empty states with a small SVG icon + message in `BookingGrid` and `SeriesList`
+- [ ] Add loading skeletons (`Skeleton` from shadcn/ui) to `CourtGrid` and `BookingGrid` via `<Suspense>`
 - [ ] Add error boundaries around calendar and court selector
-- [ ] Add `sonner` toast for booking conflicts, successful creates, and payment logs
+
+**Deployment**
 - [ ] Audit all mobile viewports: 320px (small), 375px (iPhone), 768px (tablet)
 - [ ] Confirm all `<button>` court cards have descriptive `aria-label`
 - [ ] Confirm all `numeric` fields are parsed with `parseFloat()` before display/arithmetic
@@ -660,4 +712,10 @@ DATABASE_URL="..." npx drizzle-kit migrate
 - [ ] No `parseFloat` missing on any `numeric` DB column usage
 - [ ] No `toLocaleDateString()` calls without explicit `timeZone: 'America/Argentina/Buenos_Aires'`
 - [ ] All Server Actions call `requireRole()` before any mutation
+- [ ] No `useSensors()` or `.map()` array derivations inside Client Component render body without `useMemo`
+- [ ] No inline JSX objects passed as stable props to Client Components in Server Component parents
+- [ ] `getCanchas()` and `getCanchasConDisponibilidad()` wrapped in `cache()` — no duplicate DB calls per request
+- [ ] Active nav link highlighted via `usePathname()` on all routes
+- [ ] Sonner toasts shown for all mutations (create/cancel booking, create/cancel serie, log pago)
+- [ ] `BookingGrid` shows current-time indicator when viewing today
 - [ ] Project runs from clean clone with: `npm install` → `cp .env.example .env.local` → fill vars → `npx drizzle-kit migrate` → `npm run dev`
