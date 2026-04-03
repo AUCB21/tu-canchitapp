@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select'
 import { createCancha, updateCancha } from '@/lib/actions/canchas'
 import type { Cancha } from '@/lib/queries/canchas'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 type ActionState = { error?: string } | null
 
@@ -63,9 +63,11 @@ interface CourtFormProps {
 export function CourtForm({ cancha, trigger }: CourtFormProps) {
   const [open, setOpen] = useState(false)
 
-  const boundAction = cancha
-    ? editAction.bind(null, cancha.id)
-    : createAction
+  const boundAction = useMemo(
+    () => (cancha ? editAction.bind(null, cancha.id) : createAction),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cancha?.id]
+  )
 
   const [state, formAction, isPending] = useActionState(boundAction, null)
 

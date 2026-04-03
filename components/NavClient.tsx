@@ -2,8 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
-import { MenuIcon, XIcon } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useTheme } from 'next-themes'
+import {
+  MenuIcon, XIcon, SunIcon, MoonIcon,
+  LayoutGridIcon, CalendarIcon, RepeatIcon,
+  UsersIcon, ReceiptIcon, Settings2Icon,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NavLink {
@@ -14,70 +19,143 @@ interface NavLink {
 interface NavClientProps {
   links: NavLink[]
   email: string
+  signOutButton: React.ReactNode
 }
 
-export function NavClient({ links, email }: NavClientProps) {
+const LINK_ICONS: Record<string, React.ElementType> = {
+  '/': LayoutGridIcon,
+  '/reservas': CalendarIcon,
+  '/turnos-fijos': RepeatIcon,
+  '/clientes': UsersIcon,
+  '/pagos': ReceiptIcon,
+  '/configuracion/canchas': Settings2Icon,
+}
+
+export function NavClient({ links, email, signOutButton }: NavClientProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  function ThemeToggle({ className }: { className?: string }) {
+    return (
+      <button
+        type="button"
+        aria-label="Cambiar tema"
+        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        className={cn(
+          'flex items-center justify-center rounded-lg p-2 transition-colors hover:bg-sidebar-accent',
+          className,
+        )}
+      >
+        {!mounted
+          ? <span className="h-4 w-4" />
+          : theme === 'dark'
+            ? <SunIcon className="h-4 w-4 text-sidebar-foreground/70" />
+            : <MoonIcon className="h-4 w-4 text-sidebar-foreground/70" />
+        }
+      </button>
+    )
+  }
 
   function isActive(href: string) {
     if (href === '/') return pathname === '/'
     return pathname.startsWith(href)
   }
 
+  function NavLinks({ onClick }: { onClick?: () => void }) {
+    return (
+      <nav className="flex flex-col gap-0.5">
+        {links.map((link) => {
+          const Icon = LINK_ICONS[link.href]
+          const active = isActive(link.href)
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={onClick}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                active
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+              )}
+            >
+              {Icon && <Icon className="h-4 w-4 shrink-0" />}
+              {link.label}
+            </Link>
+          )
+        })}
+      </nav>
+    )
+  }
+
   return (
     <>
-      {/* Desktop nav */}
-      <nav className="hidden sm:flex items-center gap-1">
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-sm transition-colors',
-              isActive(link.href)
-                ? 'bg-accent font-semibold text-foreground'
-                : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-            )}
+      {/* ── Desktop sidebar ── */}
+      <aside className="hidden md:flex md:fixed md:inset-y-0 md:left-0 md:w-56 md:flex-col bg-sidebar border-r border-sidebar-border z-40">
+        {/* Brand */}
+        <div className="flex h-16 shrink-0 items-center gap-2.5 px-5 border-b border-sidebar-border">
+          <span className="text-2xl leading-none">⚽</span>
+          <span className="font-black text-base tracking-tight text-sidebar-foreground uppercase">
+            Canchas
+          </span>
+        </div>
+
+        {/* Links */}
+        <div className="flex-1 overflow-y-auto py-4 px-3">
+          <NavLinks />
+        </div>
+
+        {/* User + sign out */}
+        <div className="border-t border-sidebar-border px-3 py-4 space-y-2">
+          <div className="flex items-center justify-between px-3">
+            <p className="truncate text-xs text-sidebar-foreground/40">{email}</p>
+            <ThemeToggle />
+          </div>
+          {signOutButton}
+        </div>
+      </aside>
+
+      {/* ── Mobile top bar ── */}
+      <header className="md:hidden fixed top-0 inset-x-0 z-40 flex h-14 items-center justify-between border-b bg-sidebar text-sidebar-foreground px-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xl leading-none">⚽</span>
+          <span className="font-black tracking-tight text-sidebar-foreground uppercase text-sm">
+            Canchas
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <button
+            type="button"
+            aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+            onClick={() => setMobileOpen((v) => !v)}
+            className="rounded-lg p-2 hover:bg-sidebar-accent transition-colors"
           >
-            {link.label}
-          </Link>
-        ))}
-      </nav>
+            {mobileOpen ? <XIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
+          </button>
+        </div>
+      </header>
 
-      {/* Mobile hamburger button */}
-      <button
-        type="button"
-        aria-label="Abrir menú"
-        onClick={() => setMobileOpen((v) => !v)}
-        className="flex sm:hidden items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
-      >
-        {mobileOpen ? <XIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
-      </button>
-
-      {/* Mobile drawer */}
+      {/* ── Mobile drawer ── */}
       {mobileOpen && (
-        <div className="absolute left-0 right-0 top-full z-30 border-b bg-card shadow-lg sm:hidden">
-          <nav className="flex flex-col px-4 py-3 gap-1">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  'rounded-md px-3 py-2.5 text-sm transition-colors',
-                  isActive(link.href)
-                    ? 'bg-accent font-semibold text-foreground'
-                    : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-            <div className="border-t mt-2 pt-2">
-              <p className="px-3 py-1 text-xs text-muted-foreground">{email}</p>
+        <div className="md:hidden fixed inset-0 z-30 flex">
+          <div className="flex w-64 flex-col bg-sidebar border-r border-sidebar-border pt-14">
+            <div className="flex-1 overflow-y-auto py-4 px-3">
+              <NavLinks onClick={() => setMobileOpen(false)} />
             </div>
-          </nav>
+            <div className="border-t border-sidebar-border px-3 py-4 space-y-2">
+              <p className="truncate px-3 text-xs text-sidebar-foreground/40">{email}</p>
+              {signOutButton}
+            </div>
+          </div>
+          <div
+            className="flex-1 bg-black/50"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
         </div>
       )}
     </>

@@ -4,18 +4,21 @@ export function TimeAxis() {
 
   return (
     <>
-      {/* Empty top-left cell (aligns with CourtHeader) */}
+      {/* Empty top-left corner cell */}
       <div
         style={{ gridColumn: 1, gridRow: 1 }}
-        className="sticky top-0 z-20 bg-background border-b border-r"
+        className="sticky top-0 z-20 bg-card border-b border-r border-border"
       />
       {hours.map((hour, index) => (
         <div
           key={hour}
-          style={{ gridColumn: 1, gridRow: index + 2 }}
-          className="sticky left-0 z-10 flex items-start justify-end border-r border-border bg-background pr-2 pt-1"
+          style={{
+            gridColumn: 1,
+            gridRow: `${index * 2 + 2} / span 2`,
+          }}
+          className="sticky left-0 z-10 flex items-start justify-end border-r border-border bg-card pr-2 pt-0.5"
         >
-          <span className="text-[10px] font-medium tabular-nums text-muted-foreground leading-none">
+          <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/60 leading-none -translate-y-[0.5px]">
             {String(hour).padStart(2, '0')}:00
           </span>
         </div>

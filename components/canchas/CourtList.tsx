@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -88,10 +88,8 @@ export function CourtList({ initialCanchas }: CourtListProps) {
   }, [initialCanchas])
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useMemo(() => useSensor(PointerSensor), []),
+    useMemo(() => useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }), [])
   )
 
   function handleDragEnd(event: DragEndEvent) {
@@ -106,6 +104,8 @@ export function CourtList({ initialCanchas }: CourtListProps) {
     reorderCanchas(reordered.map((c) => c.id))
   }
 
+  const itemIds = useMemo(() => items.map((c) => c.id), [items])
+
   return (
     <DndContext
       sensors={sensors}
@@ -113,7 +113,7 @@ export function CourtList({ initialCanchas }: CourtListProps) {
       onDragEnd={handleDragEnd}
     >
       <SortableContext
-        items={items.map((c) => c.id)}
+        items={itemIds}
         strategy={verticalListSortingStrategy}
       >
         <div className="space-y-2">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import { ClienteAutocomplete } from '@/components/clientes/ClienteAutocomplete'
 import { createSerie } from '@/lib/actions/series'
@@ -90,7 +91,7 @@ export function SeriesForm({ canchas }: SeriesFormProps) {
         Nuevo turno fijo
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={handleClose}
@@ -232,7 +233,8 @@ export function SeriesForm({ canchas }: SeriesFormProps) {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

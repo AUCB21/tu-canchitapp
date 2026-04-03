@@ -2,24 +2,27 @@ import { db } from '@/db'
 import { canchas, reservas } from '@/db/schema'
 import { and, eq, gte, lt, ne, sql } from 'drizzle-orm'
 import type { InferSelectModel } from 'drizzle-orm'
+import { cache } from 'react'
 
 export type Cancha = InferSelectModel<typeof canchas>
 
-export type Disponibilidad = 'libre' | 'parcial' | 'llena'
+export type Disponibilidad = 'libre' | 'ocupada'
 
 export type CanchaConDisponibilidad = Cancha & {
   disponibilidad: Disponibilidad
+  slotsOcupados: number  // booked 1-hr slots today
+  slotsTotales: number   // total 1-hr slots in operating hours (08:00–24:00)
 }
 
-export async function getCanchas(): Promise<Cancha[]> {
+export const getCanchas = cache(async function getCanchas(): Promise<Cancha[]> {
   return db
     .select()
     .from(canchas)
     .where(eq(canchas.activa, true))
     .orderBy(canchas.orden)
-}
+})
 
-export async function getCanchasConDisponibilidad(
+export const getCanchasConDisponibilidad = cache(async function getCanchasConDisponibilidad(
   date: Date
 ): Promise<CanchaConDisponibilidad[]> {
   const todas = await getCanchas()
@@ -47,22 +50,11 @@ export async function getCanchasConDisponibilidad(
     .groupBy(reservas.canchaId)
 
   const countMap = new Map(counts.map((c) => [c.canchaId, c.total]))
-
-  // Operating hours 08:00–24:00 = 16 one-hour slots
-  const TOTAL_SLOTS = 16
+  const TOTAL_SLOTS = 16 // 08:00–24:00 = 16 hourly slots
 
   return todas.map((cancha) => {
-    const ocupados = countMap.get(cancha.id) ?? 0
-    let disponibilidad: Disponibilidad
-
-    if (ocupados === 0) {
-      disponibilidad = 'libre'
-    } else if (ocupados >= TOTAL_SLOTS) {
-      disponibilidad = 'llena'
-    } else {
-      disponibilidad = 'parcial'
-    }
-
-    return { ...cancha, disponibilidad }
+    const slotsOcupados = Math.min(countMap.get(cancha.id) ?? 0, TOTAL_SLOTS)
+    const disponibilidad: Disponibilidad = slotsOcupados > 0 ? 'ocupada' : 'libre'
+    return { ...cancha, disponibilidad, slotsOcupados, slotsTotales: TOTAL_SLOTS }
   })
-}
+})

@@ -40,7 +40,7 @@ export default async function ReservasPage({ searchParams }: ReservasPageProps) 
           <p className="text-sm text-muted-foreground capitalize">{displayDate}</p>
         </div>
         <div className="flex items-center gap-3">
-          <DateNavigator selectedDate={selectedDate} />
+          <DateNavigator selectedDate={selectedDate} basePath="/reservas" />
           <BookingForm
             canchas={canchas}
             defaultDate={selectedDate}

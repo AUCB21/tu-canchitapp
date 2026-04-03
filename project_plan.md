@@ -677,20 +677,20 @@ Performance work is scoped to the inflection points identified by static audit. 
 ### Phase 9: Polish & Deployment
 
 **UI Improvements (high impact)**
-- [ ] Mobile hamburger nav — slide-out drawer on `<768px`; current nav wraps/breaks at small widths
-- [ ] Active nav link — use `usePathname()` to add `font-semibold text-foreground` class on the current route
-- [ ] `sonner` toast notifications — success/conflict feedback for: booking create, booking cancel, serie create, pago log
-- [ ] Current-time indicator — red horizontal line at current hour inside `BookingGrid`, only when viewing today
-- [ ] `CourtCard` → calendar navigation — clicking a court card on the home screen navigates to `/reservas?date=X&cancha=Y`
+- [x] Mobile hamburger nav — slide-out drawer on `<768px`; current nav wraps/breaks at small widths
+- [x] Active nav link — use `usePathname()` to add `font-semibold text-foreground` class on the current route
+- [x] `sonner` toast notifications — success/conflict feedback for: booking create, booking cancel, serie create, pago log
+- [x] Current-time indicator — red horizontal line at current hour inside `BookingGrid`, only when viewing today
+- [x] `CourtCard` → calendar navigation — clicking a court card on the home screen navigates to `/reservas?date=X&cancha=Y`
 
 **UI Improvements (medium impact)**
-- [ ] `BookingForm` duration shortcuts — after setting start time, show quick buttons: +1h, +1.5h, +2h to auto-fill end time
-- [ ] `PagosPage` booking list — below the stat cards, show today's reservations as a table with estado badge + inline "Registrar pago" button
-- [ ] `SeriesList` next occurrence — compute and display "próximo: Lun 07/04" for each active series
+- [x] `BookingForm` duration shortcuts — after setting start time, show quick buttons: +1h, +1.5h, +2h to auto-fill end time
+- [x] `PagosPage` booking list — below the stat cards, show today's reservations as a table with estado badge + inline "Registrar pago" button
+- [x] `SeriesList` next occurrence — compute and display "próximo: Lun 07/04" for each active series
 
 **UI Improvements (polish)**
-- [ ] Empty state illustrations — replace plain text empty states with a small SVG icon + message in `BookingGrid` and `SeriesList`
-- [ ] Add loading skeletons (`Skeleton` from shadcn/ui) to `CourtGrid` and `BookingGrid` via `<Suspense>`
+- [x] Empty state illustrations — replace plain text empty states with a small SVG icon + message in `BookingGrid` and `SeriesList`
+- [x] Add loading skeletons (`Skeleton` from shadcn/ui) to `CourtGrid` and `BookingGrid` via `<Suspense>`
 - [ ] Add error boundaries around calendar and court selector
 
 **Deployment**
@@ -701,6 +701,207 @@ Performance work is scoped to the inflection points identified by static audit. 
 - [ ] Set `DATABASE_URL` to Supabase direct URL → run `drizzle-kit migrate` in prod
 - [ ] Run `seed-admin.ts` against production DB
 - [ ] Smoke test in production: login → create court → create booking → log payment → view daily summary
+
+### Phase 10: Enhanced UX
+
+Features ordered by perceived value / implementation cost ratio. Each group is independent and can be shipped incrementally.
+
+**Prerequisites**: Phase 5 (Booking Calendar) must be complete before any calendar sub-feature.
+
+---
+
+#### 10-A: Click-to-book (highest ROI)
+
+Removes the biggest daily friction — currently staff must open a form manually and re-enter court + time.
+
+- [ ] `BookingGrid.tsx`: wrap each empty cell `<div>` in a `<button>` that fires `onEmptyCellClick(courtId, slotStart)` — pass `courtId` and ISO start time as args
+- [ ] `BookingGrid.tsx`: compute `slotEnd` as `slotStart + 60min` and pass both to parent via callback
+- [ ] `app/(dashboard)/reservas/page.tsx`: hold `prefill: { canchaId, inicio, fin } | null` in `useState`; pass to `BookingForm` as controlled open state
+- [ ] `BookingForm.tsx`: accept optional `prefill` prop; when present, set `defaultValue` on court select, start time, and end time inputs
+- [ ] Verify: clicking an occupied cell does nothing (cell is not a button); clicking empty cell opens modal pre-filled
+
+---
+
+#### 10-B: Scroll to current time
+
+Single `useEffect` — negligible code cost, large UX improvement for the 08:00–24:00 grid.
+
+- [ ] `BookingGrid.tsx`: add a `ref` to the scrollable container div
+- [ ] `BookingGrid.tsx`: `useEffect(() => { const pct = (currentHour - 8) / 16; containerRef.current?.scrollTo({ top: pct * scrollHeight, behavior: 'smooth' }) }, [])` — runs once on mount
+- [ ] Only scroll when `selectedDate === today` (do not scroll when viewing past/future dates)
+- [ ] Verify: opening `/reservas` at 14:00 shows 13:00–15:00 range without manual scroll
+
+---
+
+#### 10-C: Debt badge on BookingBlock
+
+Operational visibility — staff can see unpaid bookings at a glance in the calendar.
+
+- [x] `BookingBlock.tsx`: add a `$` badge (red dot, top-right corner, absolute position) when `reserva.estado === 'pendiente_pago'`
+- [x] `lib/queries/reservas.ts`: ensure `getReservasForDay` returns `estado` field (likely already present; verify)
+- [x] Verify: creating a booking with `pendiente_pago` estado shows red badge; marking as paid removes it after revalidation
+
+---
+
+#### 10-D: Color by status
+
+Currently only green/blue distinction — adds amber for pending payment.
+
+- [x] `BookingBlock.tsx`: replace hardcoded color classes with a status→color map:
+  - `confirmada` → `bg-green-100 border-green-400 text-green-900`
+  - `pendiente_pago` → `bg-amber-100 border-amber-400 text-amber-900`
+  - `cancelada` → `bg-gray-100 border-gray-300 text-gray-400 line-through` (strikethrough)
+  - `esRecurrente = true` (any estado) → blue tint overrides: `bg-blue-100 border-blue-400 text-blue-900`
+- [ ] Add a small color legend below `BookingGrid` (4 colored dots + labels): Confirmada / Pendiente / Turno Fijo / Cancelada
+- [x] Verify: all four states render correct colors; legend matches
+
+---
+
+#### 10-E: Dark mode toggle
+
+CSS variables already defined for dark mode — just needs a toggle mechanism.
+
+- [x] Install `next-themes`: `npm install next-themes`
+- [x] Wrap `<body>` in `app/layout.tsx` with `<ThemeProvider attribute="class" defaultTheme="system" enableSystem>`
+- [x] Add theme toggle button to dashboard header (`app/(dashboard)/layout.tsx`) — use `useTheme()` from `next-themes` + a `Sun`/`Moon` lucide icon
+- [x] Verify: toggling dark mode persists across page reloads (stored in `localStorage` by next-themes)
+- [x] Verify: all shadcn/ui components render correctly in dark mode (spot-check: Button, Dialog, Badge)
+
+---
+
+#### 10-F: Stats bar on home
+
+Gives instant situational awareness — how many bookings today, how much revenue, what % occupancy.
+
+New query needed: `getDashboardStats(date)` — single SQL query with three aggregates.
+
+- [ ] `lib/queries/stats.ts` (new file): `getDashboardStats(date: Date)` — returns `{ totalReservas: number, ingresoTotal: string, ocupacionPct: number }` computed as:
+  - `totalReservas`: COUNT of non-cancelled reservas for the date across all courts
+  - `ingresoTotal`: SUM of `pagos.monto` for those reservas
+  - `ocupacionPct`: `totalReservas / (activeCourts * TOTAL_SLOTS) * 100`
+- [ ] `components/StatsBar.tsx` (new file): three stat cards in a flex row — bookings count, ARS revenue (formatted with `formatARS()`), occupancy %
+- [ ] `app/(dashboard)/page.tsx`: call `getDashboardStats(selectedDate)` alongside existing `getCanchasConDisponibilidad`; render `<StatsBar>` above `<CourtGrid>`
+- [ ] Verify: stats update when navigating dates with DateNavigator
+
+---
+
+#### 10-G: Upcoming turnos panel
+
+Small panel on home screen listing next 3 bookings across all courts.
+
+- [ ] `lib/queries/stats.ts`: add `getProximasReservas(limit = 3)` — SELECT reservas JOIN canchas JOIN clientes WHERE inicio > NOW() AND estado != 'cancelada' ORDER BY inicio LIMIT 3
+- [ ] `components/ProximasReservas.tsx` (new file): compact list — each row: court name, time (formatted with Argentina TZ), client name
+- [ ] `app/(dashboard)/page.tsx`: render `<ProximasReservas>` below `<CourtGrid>` (admin and staff both see it)
+- [ ] Verify: creating a booking in the future causes it to appear in the panel after revalidation
+
+---
+
+#### 10-H: Jump to date (date picker on DateNavigator)
+
+Replace-or-augment the `‹ ›` arrows with a proper date picker.
+
+- [ ] `components/DateNavigator.tsx`: add a `<input type="date">` (or shadcn `Popover` + `Calendar` component) that reads `selectedDate` and calls `router.push(?date=YYYY-MM-DD)` on change
+- [ ] Keep the `‹ ›` prev/next buttons alongside the picker for quick day navigation
+- [ ] Verify: selecting a date from the picker navigates to that date; URL updates; court grid reflects correct availability
+
+---
+
+#### 10-I: Global search / Cmd+K
+
+Power-user feature. Scoped to clients and bookings search; date navigation is a stretch goal.
+
+- [ ] Install `cmdk`: `npm install cmdk`
+- [ ] `components/CommandPalette.tsx` (new file): `<Command>` dialog, triggered by `Cmd+K` / `Ctrl+K` keyboard shortcut via a `useEffect` event listener
+- [ ] Search scope — two sections:
+  - **Clientes**: calls `searchClientes(query)` server action, shows name + phone; clicking navigates to `/clientes?id=X`
+  - **Reservas**: calls `searchReservas(query)` (new action, searches by client name), shows court + date + time; clicking navigates to `/reservas?date=X&cancha=Y`
+- [ ] `lib/actions/reservas.ts`: add `searchReservas(query: string)` — SELECT reservas JOIN clientes WHERE clientes.nombre ILIKE `%query%` LIMIT 8
+- [ ] Add a `Cmd+K` hint in the dashboard header (small `kbd` element, hidden on mobile)
+- [ ] Verify: typing a client name shows matching results; pressing Enter on a result navigates correctly
+
+---
+
+#### 10-J: Weekly revenue chart (admin only)
+
+Visual payoff for Phase 7 payment tracking.
+
+- [x] `lib/queries/stats.ts`: add `getRevenueLast7Days()` — SELECT DATE(pagado_en), SUM(monto) GROUP BY DATE(pagado_en) for the last 7 days; returns `{ date: string, total: number }[]`
+- [x] `app/(dashboard)/pagos/page.tsx`: import shadcn's `BarChart` wrapper (recharts) — `npx shadcn@latest add chart`; render a 7-day bar chart above the daily summary
+- [x] X axis: day labels (Lun, Mar, ...) formatted in Argentina TZ; Y axis: ARS amounts with `formatARS()` tick formatter
+- [x] Verify: chart shows correct totals matching `getResumenDiario` for each day
+
+---
+
+#### 10-K: Hover preview on BookingBlock
+
+Lightweight tooltip instead of clicking to open the full modal — reduces accidental opens.
+
+- [ ] `BookingBlock.tsx`: wrap block in shadcn `Tooltip` component; tooltip content shows: client name, start–end time, estado badge, price
+- [ ] Keep the existing `onClick → open modal` behaviour unchanged
+- [ ] Verify: hover shows tooltip within 300ms; click still opens full detail modal; tooltip does not interfere with drag-to-resize
+
+---
+
+#### 10-L: Condensed mobile calendar
+
+The CSS Grid calendar is unusable on small screens — replace with a vertical list view at `<768px`.
+
+- [ ] `components/calendar/MobileBookingList.tsx` (new file): vertical sorted list of booking cards for a single court on a selected date — each card: time range, client name, status color badge
+- [ ] `app/(dashboard)/reservas/page.tsx`: use `hidden md:block` / `block md:hidden` to show `MobileBookingList` on mobile and `BookingGrid` on desktop
+- [ ] `MobileBookingList`: include a court `<Select>` switcher at the top to change which court is displayed
+- [ ] Verify: at 375px viewport, list renders correctly; court switcher changes visible bookings
+
+---
+
+#### 10-M: Drag to resize BookingBlock (deferred — high complexity)
+
+> **Defer to post-MVP.** Requires pointer capture API, grid row math, optimistic update + server revalidation, and conflict re-check on drop. High implementation cost for a feature staff can work around by editing the booking. Revisit after Phase 10-A through 10-C are stable.
+
+---
+
+#### 10-N: Week view (deferred — medium complexity)
+
+> **Defer to post-MVP.** Requires a different grid layout (7 day columns × time rows for one court), a court selector, and a new query shape. Low daily-use value for a venue that books by court, not by week-overview. Revisit if customers request it.
+
+---
+
+#### 10-O: Export CSV
+
+- [ ] `app/(dashboard)/pagos/page.tsx`: add "Exportar CSV" button (admin only) that calls a `/api/export/pagos?date=X` route
+- [ ] `app/api/export/pagos/route.ts` (new file): GET handler — queries pagos + reservas + clientes for the date, serializes to CSV string, returns `Response` with `Content-Type: text/csv` and `Content-Disposition: attachment` header
+- [ ] CSV columns: Fecha, Hora, Cancha, Cliente, Monto, Método, Estado
+- [ ] Verify: downloading CSV for a day with 3 payments produces correct rows; opening in Excel shows correct columns
+
+---
+
+#### 10-P: Client history page
+
+- [ ] `app/(dashboard)/clientes/[id]/page.tsx` (new file): shows client name + phone + all their reservas (past and upcoming) in a table sorted by `inicio DESC`
+- [ ] `lib/queries/clientes.ts` (new file): `getClienteConReservas(id)` — SELECT cliente + reservas JOIN canchas ORDER BY inicio DESC
+- [ ] `components/ProximasReservas.tsx` and `BookingBlock.tsx`: make client name a link to `/clientes/[id]`
+- [ ] Verify: clicking a client name anywhere in the app navigates to their history page
+
+---
+
+### Summary: Recommended Implementation Order
+
+| Priority | Feature | Phase section | Why |
+|----------|---------|---------------|-----|
+| 1 | Click-to-book | 10-A | Removes biggest daily friction |
+| 2 | Scroll to current time | 10-B | Single `useEffect`, instant value |
+| 3 | Debt badge + color by status | 10-C / 10-D | Operational visibility, same component |
+| 4 | Dark mode | 10-E | Low effort, high perceived quality |
+| 5 | Stats bar | 10-F | Situational awareness on home screen |
+| 6 | Jump to date | 10-H | Quick win on DateNavigator |
+| 7 | Upcoming turnos panel | 10-G | Completes home dashboard feel |
+| 8 | Global search Cmd+K | 10-I | Power-user, impressive |
+| 9 | Weekly revenue chart | 10-J | Visual payoff for payment tracking |
+| 10 | Hover preview | 10-K | Polish |
+| 11 | Mobile calendar | 10-L | Accessibility |
+| 12 | Export CSV | 10-O | Operational utility |
+| 13 | Client history | 10-P | Relational navigation |
+| — | Drag to resize | 10-M | Deferred |
+| — | Week view | 10-N | Deferred |
 
 ---
 
@@ -718,4 +919,9 @@ Performance work is scoped to the inflection points identified by static audit. 
 - [ ] Active nav link highlighted via `usePathname()` on all routes
 - [ ] Sonner toasts shown for all mutations (create/cancel booking, create/cancel serie, log pago)
 - [ ] `BookingGrid` shows current-time indicator when viewing today
+- [ ] Clicking an empty calendar cell opens `BookingForm` pre-filled with court + time (Phase 10-A)
+- [ ] `BookingBlock` renders amber for `pendiente_pago`, green for `confirmada`, blue tint for `esRecurrente` (Phase 10-C/D)
+- [ ] Dark mode toggle persists across reloads via `next-themes` (Phase 10-E)
+- [ ] Stats bar on home updates when navigating dates (Phase 10-F)
+- [ ] `Cmd+K` opens command palette and returns client/booking results (Phase 10-I)
 - [ ] Project runs from clean clone with: `npm install` → `cp .env.example .env.local` → fill vars → `npx drizzle-kit migrate` → `npm run dev`

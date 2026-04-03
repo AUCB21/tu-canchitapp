@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import { ClienteAutocomplete } from '@/components/clientes/ClienteAutocomplete'
 import { createReserva } from '@/lib/actions/reservas'
@@ -115,7 +116,7 @@ export function BookingForm({
         Nueva reserva
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={handleClose}
@@ -266,7 +267,8 @@ export function BookingForm({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

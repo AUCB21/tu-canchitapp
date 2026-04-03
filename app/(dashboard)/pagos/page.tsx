@@ -1,4 +1,4 @@
-import { getResumenDiario, getReservasDelDia } from '@/lib/queries/pagos'
+import { getResumenDiario, getReservasDelDia, getRevenueLast7Days } from '@/lib/queries/pagos'
 import { requireRole } from '@/lib/auth-utils'
 import { DateNavigator } from '@/components/DateNavigator'
 import { PaymentForm } from '@/components/forms/PaymentForm'
@@ -33,9 +33,10 @@ export default async function PagosPage({ searchParams }: PagosPageProps) {
   const selectedDate = dateParam ?? today
   const dateObj = new Date(selectedDate + 'T00:00:00-03:00')
 
-  const [resumen, reservasDelDia] = await Promise.all([
+  const [resumen, reservasDelDia, weekRevenue] = await Promise.all([
     getResumenDiario(dateObj),
     getReservasDelDia(dateObj),
+    getRevenueLast7Days(),
   ])
 
   const displayDate = new Intl.DateTimeFormat('es-AR', {
@@ -106,6 +107,47 @@ export default async function PagosPage({ searchParams }: PagosPageProps) {
           </div>
         </div>
       </div>
+
+      {/* 7-day revenue bar chart */}
+      {(() => {
+        const max = Math.max(...weekRevenue.map((d) => d.total), 1)
+        const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date())
+        return (
+          <div className="rounded-xl border bg-card p-5">
+            <h2 className="text-sm font-bold mb-4 uppercase tracking-wider text-muted-foreground">Últimos 7 días</h2>
+            <div className="flex items-end gap-2 h-28">
+              {weekRevenue.map((day) => {
+                const heightPct = max > 0 ? (day.total / max) * 100 : 0
+                const isToday = day.date === today
+                return (
+                  <div key={day.date} className="flex flex-1 flex-col items-center gap-1">
+                    <span className="text-[9px] tabular-nums text-muted-foreground/60 font-medium">
+                      {day.total > 0 ? formatARS(day.total).replace('$ ', '') : ''}
+                    </span>
+                    <div className="w-full flex items-end" style={{ height: '72px' }}>
+                      <div
+                        className={cn(
+                          'w-full rounded-t-md transition-all duration-700',
+                          isToday
+                            ? 'bg-primary shadow-lg shadow-primary/30'
+                            : 'bg-primary/30 hover:bg-primary/50',
+                        )}
+                        style={{ height: `${Math.max(heightPct, day.total > 0 ? 8 : 2)}%` }}
+                      />
+                    </div>
+                    <span className={cn(
+                      'text-[10px] font-bold uppercase capitalize',
+                      isToday ? 'text-primary' : 'text-muted-foreground',
+                    )}>
+                      {day.label}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Booking list */}
       <div>

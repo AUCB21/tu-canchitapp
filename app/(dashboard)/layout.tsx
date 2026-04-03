@@ -1,8 +1,8 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { signOut } from '@/auth'
-import { Button } from '@/components/ui/button'
 import { NavClient } from '@/components/NavClient'
+import { PageTransition } from '@/components/PageTransition'
 
 async function SignOutButton() {
   return (
@@ -12,9 +12,12 @@ async function SignOutButton() {
         await signOut({ redirectTo: '/login' })
       }}
     >
-      <Button type="submit" variant="ghost" size="sm">
+      <button
+        type="submit"
+        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+      >
         Salir
-      </Button>
+      </button>
     </form>
   )
 }
@@ -43,27 +46,18 @@ export default async function DashboardLayout({
   ]
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="relative border-b bg-card px-4 py-3">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <div className="flex items-center gap-4">
-            {/* Site name — always visible */}
-            <span className="font-semibold text-sm sm:text-base">
-              Canchas
-            </span>
-            {/* Desktop nav + mobile hamburger */}
-            <NavClient links={links} email={session.user.email ?? ''} />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground hidden md:block">
-              {session.user.email}
-            </span>
-            <SignOutButton />
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+    <div className="min-h-screen bg-background">
+      <NavClient
+        links={links}
+        email={session.user.email ?? ''}
+        signOutButton={<SignOutButton />}
+      />
+      {/* pt-14 accounts for fixed mobile top bar; md:pl-56 for fixed desktop sidebar */}
+      <div className="pt-14 md:pt-0 md:pl-56">
+        <main className="mx-auto max-w-5xl px-4 py-6 md:px-8">
+          <PageTransition>{children}</PageTransition>
+        </main>
+      </div>
     </div>
   )
 }

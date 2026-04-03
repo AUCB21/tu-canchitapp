@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import { logPago } from '@/lib/actions/pagos'
 import { cn } from '@/lib/utils'
@@ -59,7 +60,7 @@ export function PaymentForm({ reservaId, precioTotal, onSuccess, trigger }: Paym
         )}
       </div>
 
-      {open && (
+      {open && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={handleClose}
@@ -150,7 +151,8 @@ export function PaymentForm({ reservaId, precioTotal, onSuccess, trigger }: Paym
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

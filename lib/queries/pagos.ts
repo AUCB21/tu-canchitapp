@@ -2,6 +2,14 @@ import { db } from '@/db'
 import { pagos, reservas, clientes, canchas } from '@/db/schema'
 import { and, gte, lt, sql, ne, eq } from 'drizzle-orm'
 import type { InferSelectModel } from 'drizzle-orm'
+import { subDays, format } from 'date-fns'
+import { es } from 'date-fns/locale'
+
+export interface DailyRevenue {
+  date: string   // "YYYY-MM-DD"
+  label: string  // "Lun", "Mar", …
+  total: number
+}
 
 export interface ResumenDiario {
   total: number
@@ -64,6 +72,35 @@ export async function getResumenDiario(date: Date): Promise<ResumenDiario> {
     transferencia: parseFloat(result.transferencia),
     reservas: count,
   }
+}
+
+/**
+ * Revenue totals for the last 7 days (today inclusive), in Argentina TZ.
+ */
+export async function getRevenueLast7Days(): Promise<DailyRevenue[]> {
+  // Build day boundaries for each of the last 7 days
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = subDays(new Date(), 6 - i)
+    const dateStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' }).format(d)
+    return {
+      date: dateStr,
+      label: format(d, 'EEE', { locale: es }),
+      start: new Date(`${dateStr}T00:00:00-03:00`),
+      end:   new Date(`${dateStr}T23:59:59-03:00`),
+    }
+  })
+
+  const results = await Promise.all(
+    days.map(async (day) => {
+      const [row] = await db
+        .select({ total: sql<string>`COALESCE(SUM(${pagos.monto}), 0)` })
+        .from(pagos)
+        .innerJoin(reservas, sql`${pagos.reservaId} = ${reservas.id}`)
+        .where(and(gte(reservas.inicio, day.start), lt(reservas.inicio, day.end)))
+      return { date: day.date, label: day.label, total: parseFloat(row.total) }
+    })
+  )
+  return results
 }
 
 /**

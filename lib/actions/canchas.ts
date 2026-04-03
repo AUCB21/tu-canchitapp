@@ -2,7 +2,7 @@
 
 import { db } from '@/db'
 import { canchas } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { requireRole } from '@/lib/auth-utils'
 import { revalidatePath } from 'next/cache'
 
@@ -14,12 +14,13 @@ export async function createCancha(data: {
   await requireRole('admin')
 
   // Place at the end of the current list
-  const all = await db.select({ orden: canchas.orden }).from(canchas)
-  const maxOrden = all.length > 0 ? Math.max(...all.map((c) => c.orden)) : -1
+  const [{ maxOrden }] = await db
+    .select({ maxOrden: sql<number | null>`COALESCE(MAX(${canchas.orden}), -1)` })
+    .from(canchas)
 
   const [cancha] = await db
     .insert(canchas)
-    .values({ ...data, capacidad: data.capacidad ?? 10, orden: maxOrden + 1 })
+    .values({ ...data, capacidad: data.capacidad ?? 10, orden: (maxOrden ?? -1) + 1 })
     .returning()
 
   revalidatePath('/')
