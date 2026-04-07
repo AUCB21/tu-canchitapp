@@ -95,7 +95,7 @@ export async function createSerie(data: {
           precio: data.precio.toString(),
           esRecurrente: true,
           serieId: serie.id,
-          creadoPor: parseInt(session.user.id),
+          creadoPor: session.userId,
         }))
       )
     }

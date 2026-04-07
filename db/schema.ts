@@ -47,10 +47,10 @@ export const clientes = pgTable('clientes', {
 })
 
 export const usuarios = pgTable('usuarios', {
-  id: serial('id').primaryKey(),
+  // UUID matches supabase.auth.users.id
+  id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
   rol: rolUsuario('rol').notNull().default('staff'),
-  hashedPassword: text('hashed_password').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -94,7 +94,7 @@ export const reservas = pgTable(
     notas: text('notas'),
     serieId: integer('serie_id').references(() => seriesRecurrentes.id), // null for ad-hoc
     esRecurrente: boolean('es_recurrente').notNull().default(false),
-    creadoPor: integer('creado_por').references(() => usuarios.id),
+    creadoPor: text('creado_por').references(() => usuarios.id),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

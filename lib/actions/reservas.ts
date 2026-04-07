@@ -53,7 +53,7 @@ export async function createReserva(data: {
           notas: data.notas,
           esRecurrente: data.esRecurrente ?? false,
           serieId: data.serieId,
-          creadoPor: parseInt(session.user.id),
+          creadoPor: session.userId,
         })
         .returning()
 
