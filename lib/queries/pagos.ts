@@ -1,7 +1,6 @@
 import { db } from '@/db'
 import { pagos, reservas, clientes, canchas } from '@/db/schema'
 import { and, gte, lt, sql, ne, eq } from 'drizzle-orm'
-import type { InferSelectModel } from 'drizzle-orm'
 import { subDays, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 

@@ -2,7 +2,7 @@
 
 import { db } from '@/db'
 import { clientes } from '@/db/schema'
-import { eq, ilike, or, and, ne } from 'drizzle-orm'
+import { eq, ilike, or, and } from 'drizzle-orm'
 import { requireRole } from '@/lib/auth-utils'
 import { revalidatePath } from 'next/cache'
 import type { InferSelectModel } from 'drizzle-orm'

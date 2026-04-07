@@ -6,7 +6,7 @@ import { cancelSerie } from '@/lib/actions/series'
 import type { SerieConRelaciones } from '@/lib/queries/series'
 import { formatARS } from '@/lib/utils'
 import { StarIcon, Trash2Icon, CalendarIcon } from 'lucide-react'
-import { addDays, getDay, nextDay, format } from 'date-fns'
+import { addDays, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 const DIAS_LABEL = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']

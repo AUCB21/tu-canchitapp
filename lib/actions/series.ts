@@ -6,7 +6,7 @@ import { and, eq, gt } from 'drizzle-orm'
 import { requireRole } from '@/lib/auth-utils'
 import { revalidatePath } from 'next/cache'
 import { argToUTC } from '@/lib/utils'
-import { addWeeks, getDay, nextDay, startOfDay, isAfter } from 'date-fns'
+import { addWeeks, getDay, startOfDay, isAfter } from 'date-fns'
 import type { InferSelectModel } from 'drizzle-orm'
 
 export type SerieRecurrente = InferSelectModel<typeof seriesRecurrentes>

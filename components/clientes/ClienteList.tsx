@@ -11,9 +11,11 @@ import {
   checkDuplicates,
   type Cliente,
 } from '@/lib/actions/clientes'
+import type { ClienteEnriquecido } from '@/lib/queries/clientes'
+import { formatARS, toArgDateShort } from '@/lib/utils'
 
 interface ClienteListProps {
-  initialClientes: Cliente[]
+  initialClientes: ClienteEnriquecido[]
 }
 
 function avatar(nombre: string) {
@@ -54,8 +56,15 @@ function InlineForm({
   const debouncedTelefono = useDebounce(telefono, 400)
 
   useEffect(() => {
-    if (!debouncedNombre.trim()) { setDupes([]); return }
-    checkDuplicates(debouncedNombre, debouncedTelefono || undefined, excludeId).then(setDupes)
+    let cancelled = false
+    if (!debouncedNombre.trim()) {
+      // Return empty via a resolved promise to avoid synchronous setState
+      Promise.resolve().then(() => { if (!cancelled) setDupes([]) })
+    } else {
+      checkDuplicates(debouncedNombre, debouncedTelefono || undefined, excludeId)
+        .then((result) => { if (!cancelled) setDupes(result) })
+    }
+    return () => { cancelled = true }
   }, [debouncedNombre, debouncedTelefono, excludeId])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -145,7 +154,8 @@ export function ClienteList({ initialClientes }: ClienteListProps) {
     return new Promise<void>((resolve) => {
       startTransition(async () => {
         const nuevo = await createCliente({ nombre, telefono: telefono || undefined })
-        setItems((prev) => [nuevo, ...prev].sort((a, b) => a.nombre.localeCompare(b.nombre)))
+        const enriched: ClienteEnriquecido = { ...nuevo, ultimaReserva: null, totalReservas: 0, deuda: 0 }
+        setItems((prev) => [enriched, ...prev].sort((a, b) => a.nombre.localeCompare(b.nombre)))
         setCreating(false)
         resolve()
       })
@@ -156,7 +166,7 @@ export function ClienteList({ initialClientes }: ClienteListProps) {
     return new Promise<void>((resolve) => {
       startTransition(async () => {
         const updated = await updateCliente(id, { nombre, telefono: telefono || undefined })
-        setItems((prev) => prev.map((c) => (c.id === id ? updated : c)))
+        setItems((prev) => prev.map((c) => (c.id === id ? { ...c, ...updated } : c)))
         setEditingId(null)
         resolve()
       })
@@ -244,9 +254,26 @@ export function ClienteList({ initialClientes }: ClienteListProps) {
                     >
                       {c.nombre}
                     </Link>
-                    {c.telefono && (
-                      <p className="text-xs text-muted-foreground">{c.telefono}</p>
-                    )}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                      {c.telefono && (
+                        <span className="text-xs text-muted-foreground">{c.telefono}</span>
+                      )}
+                      {c.totalReservas > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {c.totalReservas} reserva{c.totalReservas !== 1 && 's'}
+                        </span>
+                      )}
+                      {c.ultimaReserva && (
+                        <span className="text-xs text-muted-foreground">
+                          Últ: {toArgDateShort(new Date(c.ultimaReserva))}
+                        </span>
+                      )}
+                      {c.deuda > 0 && (
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                          Deuda {formatARS(c.deuda)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className={cn('flex items-center gap-1 shrink-0', isPending && 'opacity-50 pointer-events-none')}>
                     <button

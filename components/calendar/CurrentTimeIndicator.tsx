@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react'
 
 const DAY_START_HOUR = 8
 const SLOT_MINUTES = 30
-const TOTAL_SLOTS = ((24 - DAY_START_HOUR) * 60) / SLOT_MINUTES // 32
-const TOTAL_COURTS = 1 // used for col-span; overridden via prop
 
 interface CurrentTimeIndicatorProps {
   numCourts: number

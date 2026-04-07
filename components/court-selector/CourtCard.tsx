@@ -30,29 +30,25 @@ const TIPO_LABEL: Record<string, string> = {
   futbol7: 'Fútbol 7',
 }
 
-/**
- * Portrait football pitch based on the provided reference SVG.
- * ViewBox: 0 0 61 116 (pitch 55×110 + 3px margin each side).
- * Grass: horizontal alternating stripes (dark/light green).
- * Lines: FIFA-proportioned — penalty area, goal area, penalty arc, corner arcs.
- */
-/**
- * Landscape football pitch — reference SVG rotated 90°.
- * ViewBox: 0 0 116 61 (pitch 110×55 + 3px margin each side).
- * Grass: vertical alternating stripes (dark/light green).
- * Lines: same FIFA proportions, axes swapped (x↔y from portrait version).
- */
-function FootballPitch() {
-  // Vertical stripes (run top-to-bottom, alternate left-to-right)
-  const stripes: Array<{ x: number; w: number; dark: boolean }> = []
+// Static stripe data — computed once at module load, not per render.
+const STRIPES: Array<{ x: number; w: number; dark: boolean }> = (() => {
+  const result: Array<{ x: number; w: number; dark: boolean }> = []
   let x = 0
   let dark = true
   for (const w of [3, ...Array(21).fill(6)]) {
-    stripes.push({ x, w, dark })
+    result.push({ x, w, dark })
     x += w
     dark = !dark
   }
+  return result
+})()
 
+/**
+ * Landscape football pitch SVG (110×55 + 3px margin).
+ * FIFA-proportioned markings: penalty areas, goal areas, arcs, center circle.
+ * Exported for reuse (e.g. login page decoration).
+ */
+export function FootballPitch() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -92,7 +88,7 @@ function FootballPitch() {
       </defs>
 
       {/* Vertical grass stripes */}
-      {stripes.map(({ x: sx, w, dark: isDark }, i) => (
+      {STRIPES.map(({ x: sx, w, dark: isDark }, i) => (
         <rect key={i} x={sx} y="0" width={w} height="61" fill={isDark ? '#3E7B3E' : '#4A934A'} />
       ))}
 
@@ -143,6 +139,16 @@ export function CourtCard({ cancha, dateParam }: CourtCardProps) {
       {/* Pitch — landscape aspect matches 116:61 viewBox */}
       <div className="relative w-full overflow-hidden" style={{ aspectRatio: '116 / 61' }}>
         <FootballPitch />
+
+        {/* Occupied overlay — diagonal stripes */}
+        {cancha.disponibilidad === 'ocupada' && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage: 'repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(0,0,0,0.18) 6px, rgba(0,0,0,0.18) 8px)',
+            }}
+          />
+        )}
 
         {/* Name overlay at bottom of pitch */}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-2.5 pt-6 pb-2">

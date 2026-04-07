@@ -1,18 +1,14 @@
 import type { Cancha } from '@/lib/queries/canchas'
+import { cn } from '@/lib/utils'
 
 interface CourtHeaderProps {
   canchas: Pick<Cancha, 'id' | 'nombre' | 'tipo'>[]
 }
 
-// Each court gets a distinct gradient header — cycles through 6 palettes
-const GRADIENTS = [
-  'from-sky-600 to-sky-800',
-  'from-violet-600 to-violet-800',
-  'from-emerald-600 to-emerald-800',
-  'from-amber-600 to-amber-800',
-  'from-rose-600 to-rose-800',
-  'from-indigo-600 to-indigo-800',
-]
+const TIPO_BADGE: Record<string, string> = {
+  futbol5: 'bg-sky-500/20 text-sky-300',
+  futbol7: 'bg-violet-500/20 text-violet-300',
+}
 
 export function CourtHeader({ canchas }: CourtHeaderProps) {
   return (
@@ -21,12 +17,15 @@ export function CourtHeader({ canchas }: CourtHeaderProps) {
         <div
           key={cancha.id}
           style={{ gridColumn: index + 2, gridRow: 1 }}
-          className={`sticky top-0 z-20 flex flex-col items-center justify-center gap-0.5 border-b border-l border-white/10 px-2 py-2 bg-gradient-to-b ${GRADIENTS[index % GRADIENTS.length]}`}
+          className="sticky top-0 z-20 flex items-center justify-center gap-1.5 border-b border-l border-border/50 px-2 py-2 bg-sidebar"
         >
-          <span className="text-[11px] font-black text-white truncate max-w-full uppercase tracking-tight drop-shadow">
+          <span className="text-[11px] font-black text-sidebar-foreground truncate max-w-full uppercase tracking-tight">
             {cancha.nombre}
           </span>
-          <span className="text-[9px] leading-none text-white/70 font-semibold uppercase tracking-widest">
+          <span className={cn(
+            'shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider',
+            TIPO_BADGE[cancha.tipo],
+          )}>
             {cancha.tipo === 'futbol5' ? 'F5' : 'F7'}
           </span>
         </div>

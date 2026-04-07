@@ -3,23 +3,14 @@ import { requireRole } from '@/lib/auth-utils'
 import { DateNavigator } from '@/components/DateNavigator'
 import { PaymentForm } from '@/components/forms/PaymentForm'
 import { formatARS, toArgTime } from '@/lib/utils'
-import { BanknoteIcon, SmartphoneIcon, CalendarIcon, CircleDollarSignIcon, StarIcon } from 'lucide-react'
+import { BanknoteIcon, SmartphoneIcon, CalendarIcon, CircleDollarSignIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface PagosPageProps {
   searchParams: Promise<{ date?: string }>
 }
 
-const ESTADO_STYLES = {
-  confirmada: 'bg-emerald-100 text-emerald-700',
-  pendiente_pago: 'bg-amber-100 text-amber-700',
-  cancelada: 'bg-red-100 text-red-700',
-}
-const ESTADO_LABEL = {
-  confirmada: 'Confirmada',
-  pendiente_pago: 'Pend. pago',
-  cancelada: 'Cancelada',
-}
+import { ESTADO_BADGE_LIGHT as ESTADO_STYLES, ESTADO_LABEL } from '@/lib/constants'
 
 export default async function PagosPage({ searchParams }: PagosPageProps) {
   await requireRole('admin')

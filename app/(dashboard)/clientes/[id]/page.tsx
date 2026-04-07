@@ -5,18 +5,7 @@ import { getClienteConHistorial } from '@/lib/queries/clientes'
 import { formatARS, toArgDateShort, toArgTime } from '@/lib/utils'
 import { ArrowLeftIcon, PhoneIcon, CalendarIcon, RepeatIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-const ESTADO_BADGE: Record<string, string> = {
-  confirmada: 'bg-emerald-500/15 text-emerald-400',
-  pendiente_pago: 'bg-amber-500/15 text-amber-400',
-  cancelada: 'bg-muted text-muted-foreground line-through',
-}
-
-const ESTADO_LABEL: Record<string, string> = {
-  confirmada: 'Confirmada',
-  pendiente_pago: 'Pendiente',
-  cancelada: 'Cancelada',
-}
+import { ESTADO_BADGE_DARK as ESTADO_BADGE, ESTADO_LABEL } from '@/lib/constants'
 
 export default async function ClienteHistorialPage({
   params,
@@ -34,7 +23,6 @@ export default async function ClienteHistorialPage({
   const { cliente, reservasHistorial, totalGastado } = data
   const activas = reservasHistorial.filter((r) => r.estado !== 'cancelada')
   const proximas = activas.filter((r) => r.inicio > new Date())
-  const pasadas = activas.filter((r) => r.inicio <= new Date())
 
   return (
     <div className="space-y-6">

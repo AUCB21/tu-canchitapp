@@ -19,7 +19,7 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle>Administrador de Canchas</CardTitle>
+        <CardTitle>Tu Canchitapp</CardTitle>
         <CardDescription>Ingresá tu email y contraseña</CardDescription>
       </CardHeader>
       <CardContent>

@@ -1,7 +1,5 @@
-import { db } from '@/db'
-import { clientes } from '@/db/schema'
-import { ilike, or, and, eq } from 'drizzle-orm'
 import { requireRole } from '@/lib/auth-utils'
+import { getClientesEnriquecidos } from '@/lib/queries/clientes'
 import { ClienteList } from '@/components/clientes/ClienteList'
 
 export default async function ClientesPage({
@@ -13,19 +11,7 @@ export default async function ClientesPage({
   const { q } = await searchParams
   const query = q?.trim() ?? ''
 
-  const results = await db
-    .select()
-    .from(clientes)
-    .where(
-      query
-        ? and(
-            eq(clientes.activa, true),
-            or(ilike(clientes.nombre, `%${query}%`), ilike(clientes.telefono, `%${query}%`))
-          )
-        : eq(clientes.activa, true)
-    )
-    .orderBy(clientes.nombre)
-    .limit(50)
+  const results = await getClientesEnriquecidos(query || undefined)
 
   return (
     <div className="space-y-6">
