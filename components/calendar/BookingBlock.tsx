@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { toArgTime, formatARS } from '@/lib/utils'
 import type { Reserva } from '@/lib/queries/reservas'
@@ -98,7 +99,13 @@ export function BookingBlock({ reserva, courtIndex }: BookingBlockProps) {
           >
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="font-bold text-sm">{reserva.cliente.nombre}</h2>
+                <Link
+                  href={`/clientes/${reserva.clienteId}`}
+                  className="font-bold text-sm hover:text-primary transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {reserva.cliente.nombre}
+                </Link>
                 {reserva.cliente.telefono && (
                   <p className="text-xs text-muted-foreground">{reserva.cliente.telefono}</p>
                 )}

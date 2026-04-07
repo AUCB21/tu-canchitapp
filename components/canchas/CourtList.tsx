@@ -88,8 +88,8 @@ export function CourtList({ initialCanchas }: CourtListProps) {
   }, [initialCanchas])
 
   const sensors = useSensors(
-    useMemo(() => useSensor(PointerSensor), []),
-    useMemo(() => useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }), [])
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
   function handleDragEnd(event: DragEndEvent) {

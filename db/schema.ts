@@ -40,6 +40,7 @@ export const clientes = pgTable('clientes', {
   id: serial('id').primaryKey(),
   nombre: text('nombre').notNull(),
   telefono: text('telefono'),
+  activa: boolean('activa').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

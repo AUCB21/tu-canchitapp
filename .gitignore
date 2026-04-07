@@ -19,6 +19,8 @@
 
 # production
 /build
+.env
+
 
 # misc
 .DS_Store
@@ -32,6 +34,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 .secret
 
 # vercel
@@ -40,3 +43,24 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+Thumbs.db
+
+# Caches
+.eslintcache
+
+# General logs
+*.log
+
+# extras
+CLAUDE.md
+AGENTS.md
+.agents
+.claude

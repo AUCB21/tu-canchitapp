@@ -1,0 +1,1 @@
+ALTER TABLE "clientes" ADD COLUMN "activa" boolean DEFAULT true NOT NULL;
